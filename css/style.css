@@ -1,0 +1,4 @@
+#listaJugadores{
+    display: flex;
+    flex-direction: row;
+}
