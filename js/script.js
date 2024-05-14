@@ -1,5 +1,6 @@
 let jugadoresJugando = []
 let jugadoresBanco = []
+let contadorCambios = 0
 // Función para obtener los jugadores del localStorage
 const obtenerJugadoresLocalStorage = () => {
     const jugadoresString = localStorage.getItem('jugadores');
@@ -22,13 +23,16 @@ const agregarJugador = async () => {
         const nombre = prompt("Ingrese el nombre del jugador:");
         const edad = parseInt(prompt("Ingrese la edad del jugador:"));
         let posicion = prompt("Ingrese la posición del jugador:");
-        let estado = confirm('El jugador es titular?')
+        let estado = prompt('Ingrese el estado del jugador: ti (titular), su (suplente), le (lesionado)')
 
-        if (estado){
+        if (estado.toLowerCase() === 'ti'){
             estado = 'jugando'
         }
-        else{
+        else if (estado.toLowerCase() === 'su'){
             estado = 'banco'
+        }
+        else if (estado.toLowerCase() === 'le'){
+            estado = 'lesionado'
         }
 
 
@@ -57,33 +61,28 @@ const agregarJugador = async () => {
     else{
         alert('Ya hay 22 jugadores en el equipo')
     }
-    
+    listarJugadores()
 
 };
 
-const verificarListaJugadores = (jugador) => {
-    if (jugador.estado == 'jugando'){
-        let indice = jugadoresBanco.indexOf(jugador);
-        if (indice !== -1) {
-            jugadoresBanco.splice(indice, 1);
-        } else {
+const separarListaJugadores = (jugadores) => {
+    jugadoresJugando = []
+    jugadoresBanco = []
+    jugadores.forEach(jugador => {
+        if(jugador.estado === 'jugando'){
             jugadoresJugando.push(jugador)
         }
-    }
-    else if(jugador.estado == 'banco'){
-        let indice = jugadoresJugando.indexOf(jugador);
-        if (indice !== -1) {
-            jugadoresJugando.splice(indice, 1);
-        } else {
+        else if(jugador.estado === 'banco'){
             jugadoresBanco.push(jugador)
         }
-    }
-};
+    })
+}
 
 // Función asíncrona para listar todos los jugadores del equipo
 const listarJugadores = async () => {
     // Implementación para listar todos los jugadores
     const jugadores = await obtenerJugadoresLocalStorage()
+    separarListaJugadores(jugadores)
     const listaJugadores = document.getElementById('listaJugadores')
     while(listaJugadores.firstChild){
         listaJugadores.removeChild(listaJugadores.firstChild)
@@ -108,7 +107,6 @@ const listarJugadores = async () => {
         elementoJugador.appendChild(estadoJugador)
         elementoJugador.appendChild(botonPosicion)
         listaJugadores.appendChild(elementoJugador)
-        verificarListaJugadores(jugador)
 
 })}
 
@@ -126,44 +124,63 @@ const asignarPosicion = async (e, jugadorAntiguaPosicion) => {
 
 // Función asíncrona para realizar un cambio durante un partido
 const realizarCambio = async () => {
-    const cambios = document.getElementById('cambios')
-
-    const selectTitulares = document.createElement('select')
-    const placeHolderTitular = document.createElement('option')
-    placeHolderTitular.text = 'Seleccione un jugador en el campo'
-    selectTitulares.appendChild(placeHolderTitular)
-    jugadoresJugando.forEach(jugador => {
-        const opcion = document.createElement('option')
-        opcion.text = jugador.nombre
-        opcion.value = jugador.nombre
-        selectTitulares.appendChild(opcion)
-    })
-
-    const selectSuplentes = document.createElement('select')
-    const placeHolderSuplente = document.createElement('option')
-    placeHolderSuplente.text = 'Seleccione un jugador en el banco'
-    selectSuplentes.appendChild(placeHolderSuplente)
-    jugadoresBanco.forEach(jugador => {
-        const opcion = document.createElement('option')
-        opcion.text = jugador.nombre
-        opcion.value = jugador.nombre
-        selectSuplentes.appendChild(opcion)
-    })
-    cambios.appendChild(selectTitulares)
-    cambios.appendChild(selectSuplentes)
-    const btnCambio = document.createElement('button')
-    btnCambio.textContent = "Realizar cambio"
-    cambios.appendChild(btnCambio)
-    btnCambio.addEventListener('click', () => {
-        let jugadorCancha = selectTitulares.value
-        jugadorCancha = jugadoresJugando.find(jugador => jugadorCancha == jugador.nombre)
-        let jugadorBanco = selectSuplentes.value
-        jugadorBanco = jugadoresBanco.find(jugador => jugadorBanco == jugador.nombre)
-        jugadorCancha = {...jugadorCancha, estado: 'banco'}
-        jugadorBanco = {...jugadorBanco, estado: 'jugando'}
-        listarJugadores()
-        cambios.style.display = 'none'
-    })
+    if (contadorCambios < 5){
+        const cambios = document.getElementById('cambios')
+        const jugadores = await obtenerJugadoresLocalStorage()
+        const selectTitulares = document.createElement('select')
+        selectTitulares.id = Date.now()
+        const placeHolderTitular = document.createElement('option')
+        placeHolderTitular.text = 'Seleccione un jugador en el campo'
+        selectTitulares.appendChild(placeHolderTitular)
+        jugadoresJugando.forEach(jugador => {
+            const opcion = document.createElement('option')
+            opcion.text = jugador.nombre
+            opcion.value = jugador.nombre
+            selectTitulares.appendChild(opcion)
+        })
+        const selectSuplentes = document.createElement('select')
+        selectSuplentes.id = Date.now()
+        const placeHolderSuplente = document.createElement('option')
+        placeHolderSuplente.text = 'Seleccione un jugador en el banco'
+        selectSuplentes.appendChild(placeHolderSuplente)
+        jugadoresBanco.forEach(jugador => {
+            const opcion = document.createElement('option')
+            opcion.text = jugador.nombre
+            opcion.value = jugador.nombre
+            selectSuplentes.appendChild(opcion)
+        })
+        cambios.appendChild(selectTitulares)
+        cambios.appendChild(selectSuplentes)
+        const btnCambio = document.createElement('button')
+        btnCambio.textContent = "Realizar cambio"
+        cambios.appendChild(btnCambio)
+        btnCambio.addEventListener('click', () => {
+            let jugadorCancha = selectTitulares.value
+            jugadorCancha = jugadoresJugando.find(jugador => jugadorCancha == jugador.nombre)
+            let jugadorBanco = selectSuplentes.value
+            jugadorBanco = jugadoresBanco.find(jugador => jugadorBanco == jugador.nombre)
+            jugadorCancha = {...jugadorCancha, estado: 'banco'}
+            jugadorBanco = {...jugadorBanco, estado: 'jugando'}
+            for (let i = 0; i < jugadores.length; i++){
+                if(jugadores[i].nombre === jugadorCancha.nombre){
+                    jugadores[i] = jugadorCancha
+                }
+                else if(jugadores[i].nombre === jugadorBanco.nombre){
+                    jugadores[i] = jugadorBanco
+                }
+            }
+            guardarJugadoresLocalStorage(jugadores)
+            listarJugadores()
+            while (cambios.firstChild) {
+                cambios.removeChild(cambios.firstChild);
+            }
+            contadorCambios++
+        })
+    }
+    else{
+        alert('Ya se han realizado los 5 cambios')
+    }
+    
 };
 
 const eliminarEquipo = () => {
@@ -171,15 +188,3 @@ const eliminarEquipo = () => {
     listarJugadores()
 }
 
-// Función principal asíncrona que interactúa con el usuario
-const main = async () => {
-    try {
-        // Lógica para interactuar con el usuario y llamar a las funciones adecuadas
-    } catch (error) {
-        console.error('Error:', error);
-    }
-};
-
-// Llamar a la función principal para iniciar la aplicación
-
-main();
